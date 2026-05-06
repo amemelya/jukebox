@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 
 const phonePattern = /^\d{10}$/;
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:4000/api/auth";
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "/api/auth";
 const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 const sessionStorageKey = "jukebox-auth-session";
 const defaultBio =
   "Albums for late trains, songs with sharp bridges, and reviews written before the replay button cools down.";
 
 const featurePoints = [
-  "Queue sessions with friends in seconds",
-  "Pick up on any screen without losing your place",
-  "Secure sign-in for listeners and hosts"
+  "Create shared listening rooms in seconds",
+  "Continue seamlessly across devices",
+  "Secure access for listeners and hosts"
 ];
 
 const friendLogs = [
@@ -23,6 +23,7 @@ const friendLogs = [
 ];
 
 const profileMenuItems = ["Profile", "Reviews", "ListenList", "Settings", "Logout"];
+
 const topAlbums = [
   { title: "Neon Afterglow", artist: "Satin Avenue", accent: "rose" },
   { title: "Glass Receiver", artist: "Mira Lane", accent: "gold" },
@@ -30,6 +31,7 @@ const topAlbums = [
   { title: "Soft Exit", artist: "June Static", accent: "ember" },
   { title: "Chrome Hearts Motel", artist: "Color Motel", accent: "cobalt" }
 ];
+
 const recentReviews = [
   {
     title: "Neon Afterglow",
@@ -67,6 +69,7 @@ const recentReviews = [
     date: "May 01"
   }
 ];
+
 const profileStats = [
   { value: "987", label: "Songs listened" },
   { value: "143", label: "This year" },
@@ -87,6 +90,26 @@ function resolveHandle(user) {
   return user?.subject || "listener";
 }
 
+function menuGlyph(item) {
+  if (item === "Profile") {
+    return "P";
+  }
+
+  if (item === "Reviews") {
+    return "R";
+  }
+
+  if (item === "ListenList") {
+    return "L";
+  }
+
+  if (item === "Settings") {
+    return "S";
+  }
+
+  return "O";
+}
+
 export default function App() {
   const googleButtonRef = useRef(null);
   const profileMenuRef = useRef(null);
@@ -101,7 +124,7 @@ export default function App() {
     const stored = window.sessionStorage.getItem(sessionStorageKey);
     return stored ? JSON.parse(stored) : null;
   });
-  const [message, setMessage] = useState("Use your Google account or request a one-time code.");
+  const [message, setMessage] = useState("Sign in with Google or request a one-time verification code.");
   const [profileDraft, setProfileDraft] = useState(() => {
     const stored = window.sessionStorage.getItem(sessionStorageKey);
     const session = stored ? JSON.parse(stored) : null;
@@ -207,15 +230,15 @@ export default function App() {
       const data = await response.json();
 
       if (!response.ok) {
-        setMessage(data.message || "Could not send OTP.");
+        setMessage(data.message || "Could not send the verification code.");
         return;
       }
 
       setOtpSent(true);
       setOtp("");
-      setMessage(data.devOtp ? `OTP sent to +91 ${phone}. Dev code: ${data.devOtp}` : `OTP sent to +91 ${phone}.`);
+      setMessage(`A verification code has been sent to +91 ${phone}.`);
     } catch {
-      setMessage("Backend is unreachable. Start the backend server and try again.");
+      setMessage("We could not connect right now. Please try again shortly.");
     } finally {
       setIsSubmitting(false);
     }
@@ -245,9 +268,9 @@ export default function App() {
       }
 
       persistSession(data);
-      setMessage(data.message || "Verification completed.");
+      setMessage(data.message || "Verification complete.");
     } catch {
-      setMessage("Backend is unreachable. Start the backend server and try again.");
+      setMessage("We could not connect right now. Please try again shortly.");
     } finally {
       setIsSubmitting(false);
     }
@@ -272,7 +295,7 @@ export default function App() {
       persistSession(data);
       setMessage(data.message || "Google sign-in complete.");
     } catch {
-      setMessage("Backend is unreachable. Start the backend server and try again.");
+      setMessage("We could not connect right now. Please try again shortly.");
     } finally {
       setIsSubmitting(false);
     }
@@ -302,7 +325,7 @@ export default function App() {
     setOtp("");
     setOtpSent(false);
     setPhone("");
-    setMessage("Signed out. Use your Google account or request a one-time code.");
+    setMessage("You have been signed out.");
 
     if (window.google) {
       window.google.accounts.id.disableAutoSelect();
@@ -396,7 +419,7 @@ export default function App() {
                   <div className="recent-reviews-section">
                     <div className="top-albums-header">
                       <h2>Recent reviews</h2>
-                      <span>Five latest notes from the listening diary</span>
+                      <span>Five recent entries from your listening journal</span>
                     </div>
                     <div className="recent-reviews-list">
                       {recentReviews.map((review) => (
@@ -406,7 +429,7 @@ export default function App() {
                               <strong>{review.title}</strong>
                               <p>{review.artist}</p>
                             </div>
-                            <span>{review.rating} ★</span>
+                            <span>{review.rating} / 5</span>
                           </div>
                           <p className="recent-review-note">{review.note}</p>
                           <span className="recent-review-date">{review.date}</span>
@@ -527,8 +550,8 @@ export default function App() {
         <section className="feed-shell">
           <div className="welcome-band">
             <h1>
-              Welcome back, <span>{handle}</span>. Here&apos;s what your friends have been
-              listening...
+              Welcome back, <span>{handle}</span>. Here&apos;s what people in your circle have
+              been listening to.
             </h1>
           </div>
 
@@ -554,7 +577,7 @@ export default function App() {
                 </div>
 
                 <div className="log-meta-row">
-                  <span>{entry.rating} ★</span>
+                  <span>{entry.rating} / 5</span>
                   <span>{entry.date}</span>
                 </div>
               </article>
@@ -596,7 +619,7 @@ export default function App() {
                   <div className="account-avatar account-fallback">{avatarLabel}</div>
                 )}
                 <span className="account-name">{handle}</span>
-                <span className={`account-caret${isProfileMenuOpen ? " open" : ""}`}>▾</span>
+                <span className={`account-caret${isProfileMenuOpen ? " open" : ""}`}>v</span>
               </button>
 
               {isProfileMenuOpen ? (
@@ -610,11 +633,7 @@ export default function App() {
                       role="menuitem"
                     >
                       <span className="menu-icon" aria-hidden="true">
-                        {item === "Profile" && "●"}
-                        {item === "Reviews" && "★"}
-                        {item === "ListenList" && "♫"}
-                        {item === "Settings" && "⚙"}
-                        {item === "Logout" && "↪"}
+                        {menuGlyph(item)}
                       </span>
                       <span>{item}</span>
                     </button>
@@ -635,10 +654,10 @@ export default function App() {
       <section className="hero-band">
         <div className="hero-copy">
           <p className="eyebrow">Jukebox</p>
-          <h1>Music rooms for people who want the queue to move fast.</h1>
+          <h1>Shared music spaces built for effortless listening.</h1>
           <p className="lead">
-            Start with a clean sign-in flow now, then wire Google OAuth and
-            mobile OTP delivery when the backend is ready.
+            Bring people together around albums, songs, and live queue sessions with a
+            sign-in experience designed to feel simple and reliable.
           </p>
           <ul className="feature-list">
             {featurePoints.map((point) => (
@@ -674,7 +693,7 @@ export default function App() {
             <div className="auth-flow">
               <h2>Continue with Google</h2>
               <p className="support-copy">
-                Use Google Identity Services, then let the Spring backend verify the returned ID token.
+                Sign in with your Google account for fast, secure access.
               </p>
               {authSession ? (
                 <div className="session-card">
@@ -689,12 +708,12 @@ export default function App() {
                 <>
                   <div className="google-button-shell" ref={googleButtonRef} />
                   <p className="helper-note">
-                    Google returns an ID token to the frontend. The backend verifies it before issuing the app token.
+                    Your Google sign-in is verified securely before access is granted.
                   </p>
                 </>
               ) : (
                 <p className="helper-note">
-                  Set `VITE_GOOGLE_CLIENT_ID` in the frontend environment before testing Google sign-in.
+                  Google sign-in is currently unavailable. Please use mobile verification instead.
                 </p>
               )}
             </div>
@@ -702,7 +721,7 @@ export default function App() {
             <div className="auth-flow">
               <h2>Sign in with mobile OTP</h2>
               <p className="support-copy">
-                Request a real SMS verification code, then let the backend exchange the successful verification for an app token.
+                Request a one-time verification code to sign in quickly and securely.
               </p>
 
               {authSession ? (
@@ -752,7 +771,7 @@ export default function App() {
                   </form>
 
                   <p className="helper-note">
-                    In development, the backend can still fall back to a mock OTP unless you switch `APP_SMS_PROVIDER` to `twilio`.
+                    Standard messaging rates may apply.
                   </p>
                 </>
               )}
