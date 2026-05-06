@@ -132,6 +132,8 @@ journalctl -u jukebox-backend -f
 
 The frontend now defaults to `/api/auth`, which is correct for Nginx reverse proxy deployment.
 
+Before building for production, create `frontend/.env.production` from `frontend/.env.production.example` and set the real Google Web Client ID if you want Google sign-in enabled.
+
 Build:
 
 ```bash
@@ -144,6 +146,15 @@ Expected output:
 
 ```bash
 dist/
+```
+
+Example production frontend env:
+
+```bash
+cat > /opt/jukebox/frontend/.env.production <<'EOF'
+VITE_API_BASE_URL=/api/auth
+VITE_GOOGLE_CLIENT_ID=REPLACE_WITH_YOUR_GOOGLE_WEB_CLIENT_ID
+EOF
 ```
 
 ## 7. Install and Configure Nginx
@@ -207,13 +218,18 @@ through the reverse proxy.
 
 ## 9. Important Google OAuth Note
 
-If you use Google login, update the Google OAuth configuration to include the exact deployed origin:
+If you use Google login, update the Google OAuth configuration to include the exact deployed origin in Authorized JavaScript origins:
 
 - `http://YOUR_EC2_PUBLIC_IP`
 
 Later, when HTTPS is added, update it again to:
 
 - `https://YOUR_DOMAIN`
+
+Also set the same client ID in:
+
+- backend `GOOGLE_CLIENT_ID`
+- frontend `VITE_GOOGLE_CLIENT_ID`
 
 ## 10. Recommended Next Step
 

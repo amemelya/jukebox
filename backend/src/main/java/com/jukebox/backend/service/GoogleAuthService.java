@@ -13,6 +13,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class GoogleAuthService {
+    private static final String GOOGLE_ISSUER = "accounts.google.com";
+    private static final String GOOGLE_HTTPS_ISSUER = "https://accounts.google.com";
 
     private final AppProperties appProperties;
 
@@ -39,6 +41,17 @@ public class GoogleAuthService {
             }
 
             GoogleIdToken.Payload payload = idToken.getPayload();
+            Object issuer = payload.getIssuer();
+            Object emailVerified = payload.get("email_verified");
+
+            if (!GOOGLE_ISSUER.equals(issuer) && !GOOGLE_HTTPS_ISSUER.equals(issuer)) {
+                throw new IllegalArgumentException("Invalid Google token issuer.");
+            }
+
+            if (!(emailVerified instanceof Boolean) || !((Boolean) emailVerified)) {
+                throw new IllegalArgumentException("Google account email is not verified.");
+            }
+
             return new UserProfile(
                     "google",
                     payload.getSubject(),

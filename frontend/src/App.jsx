@@ -277,6 +277,11 @@ export default function App() {
   }
 
   async function handleGoogleCredentialResponse(response) {
+    if (!response?.credential) {
+      setMessage("Google sign-in did not return a valid credential. Please try again.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -303,6 +308,7 @@ export default function App() {
 
   function persistSession(data) {
     if (!data.token || !data.user) {
+      setMessage("Sign-in completed, but the session could not be created.");
       return;
     }
 
@@ -315,6 +321,10 @@ export default function App() {
       pictureUrl: session.user.pictureUrl || "",
       bio: defaultBio
     });
+
+    // Force the signed-in shell to render from persisted session data even if the
+    // popup callback completes in an unexpected browser state.
+    window.location.reload();
   }
 
   function handleSignOut() {
