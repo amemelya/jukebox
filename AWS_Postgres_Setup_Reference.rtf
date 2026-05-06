@@ -1,0 +1,142 @@
+{\rtf1\ansi\deff0
+{\fonttbl{\f0 Arial;}{\f1 Courier New;}}
+\paperw12240\paperh15840\margl1440\margr1440\margt1440\margb1440
+\fs44\b Jukebox AWS PostgreSQL Setup Reference\par
+\fs24\b0
+Reference notes for the AWS RDS PostgreSQL setup completed on May 6, 2026.\par
+\par
+\b 1. Goal\par
+\b0
+Connect the Jukebox backend running on EC2 to an AWS RDS PostgreSQL instance over SSL.\par
+\par
+\b 2. AWS Resources Used\par
+\b0
+RDS DB identifier: jukebox-db\par
+RDS engine: PostgreSQL\par
+RDS endpoint: jukebox-db.cbgmumkuafkd.eu-north-1.rds.amazonaws.com\par
+Region: eu-north-1 (Stockholm)\par
+EC2 instance: i-01e955ee3d006aa30\par
+\par
+\b 3. Security Group Wiring\par
+\b0
+The EC2 instance and RDS instance were initially attached to different security groups.\par
+\par
+EC2 security group:\par
+sg-0af5784cb0ec3898a (launch-wizard-1)\par
+\par
+RDS security group:\par
+sg-0c6cf319dfcf2fc44 (default)\par
+\par
+Required inbound rule on the RDS security group:\par
+Type: PostgreSQL\par
+Protocol: TCP\par
+Port: 5432\par
+Source: sg-0af5784cb0ec3898a / launch-wizard-1\par
+\par
+Existing self-reference rule on the default security group was left in place:\par
+All traffic from sg-0c6cf319dfcf2fc44 / default\par
+\par
+\b 4. Important Notes\par
+\b0
+Test the database connection from the EC2 instance terminal, not from CloudShell, when validating app-to-database connectivity.\par
+If any database password is exposed in a terminal or screenshot, rotate it immediately in RDS.\par
+AWS does not show an existing DB password after it is set. If forgotten, reset it through RDS Modify.\par
+\par
+\b 5. Connect to the EC2 Terminal\par
+\b0
+In AWS Console:\par
+1. Go to EC2.\par
+2. Open Instances.\par
+3. Select the instance.\par
+4. Click Connect.\par
+5. Use EC2 Instance Connect.\par
+\par
+\b 6. Install PostgreSQL Client on EC2\par
+\b0
+Amazon Linux 2023 command:\par
+{\f1\fs22 sudo dnf install postgresql15 -y\par}
+\par
+Verify installation:\par
+{\f1\fs22 psql --version\par}
+\f0\fs24
+\par
+\b 7. Download RDS Certificate Bundle\par
+\b0
+Run on EC2:\par
+{\f1\fs22 curl -o global-bundle.pem https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem\par}
+\f0\fs24
+\par
+\b 8. Set Connection Variables\par
+\b0
+Run on EC2:\par
+{\f1\fs22 export RDSHOST="jukebox-db.cbgmumkuafkd.eu-north-1.rds.amazonaws.com"\par}
+{\f1\fs22 export PGPASSWORD='YOUR_PASSWORD_HERE'\par}
+\f0\fs24
+\par
+\b 9. Test Admin Connection\par
+\b0
+Run on EC2:\par
+{\f1\fs22 psql "host=$RDSHOST port=5432 dbname=postgres user=jukebox_admin sslmode=verify-full sslrootcert=./global-bundle.pem"\par}
+\f0\fs24
+\par
+Successful connection looked like:\par
+{\f1\fs22 postgres=>\par}
+\f0\fs24
+\par
+Verification query:\par
+{\f1\fs22 SELECT version();\par}
+\f0\fs24
+\par
+\b 10. Create the Application Database and User\par
+\b0
+Inside psql as jukebox_admin:\par
+{\f1\fs22 CREATE DATABASE jukebox;\par}
+{\f1\fs22 CREATE USER jukebox_app WITH PASSWORD 'YOUR_APP_PASSWORD_HERE';\par}
+{\f1\fs22 GRANT ALL PRIVILEGES ON DATABASE jukebox TO jukebox_app;\par}
+\f0\fs24
+\par
+\b 11. Test the Application User\par
+\b0
+Exit psql with:\par
+{\f1\fs22 \q\par}
+\f0\fs24
+\par
+Then set the app password and reconnect:\par
+{\f1\fs22 export PGPASSWORD='YOUR_APP_PASSWORD_HERE'\par}
+{\f1\fs22 psql "host=$RDSHOST port=5432 dbname=jukebox user=jukebox_app sslmode=verify-full sslrootcert=./global-bundle.pem"\par}
+\f0\fs24
+\par
+Verification query:\par
+{\f1\fs22 SELECT current_user, current_database();\par}
+\f0\fs24
+\par
+Expected result:\par
+current_user = jukebox_app\par
+current_database = jukebox\par
+\par
+\b 12. Clear Password Variables After Testing\par
+\b0
+Run on EC2:\par
+{\f1\fs22 unset PGPASSWORD\par}
+\f0\fs24
+\par
+\b 13. Spring Boot Values for Later Use\par
+\b0
+These are the connection values to use in the backend configuration:\par
+DB_HOST = jukebox-db.cbgmumkuafkd.eu-north-1.rds.amazonaws.com\par
+DB_PORT = 5432\par
+DB_NAME = jukebox\par
+DB_USERNAME = jukebox_app\par
+DB_PASSWORD = the chosen jukebox_app password\par
+\par
+\b 14. Troubleshooting Reference\par
+\b0
+timeout: security group or routing issue\par
+password authentication failed: wrong username or password\par
+psql: command not found: PostgreSQL client not installed on EC2\par
+certificate verify failed: wrong certificate path or SSL settings\par
+\par
+\b 15. Outcome\par
+\b0
+The EC2 instance successfully connected to the RDS PostgreSQL instance over SSL, the jukebox database was created, the jukebox_app user was created, and application-user login succeeded.\par
+}
